@@ -1,0 +1,169 @@
+// Odds Whisper — Even Realities G2 app (Track 02: Polymarket)
+// One flow, end to end:
+//   Tap temple (CLICK_EVENT) -> lens shows the next live claim:
+//   the market question, the crowd's odds (Yes %), and one check line
+//   (24h volume, 24h move, end date). Double-tap exits (OS default).
+//
+// Claims are LIVE Polymarket markets, fetched from the public Gamma API
+// (no key, no account, read-only): https://gamma-api.polymarket.com
+// outcomePrices is a JSON-encoded string like '["0.62", "0.38"]' —
+// the first value is the Yes price, which IS the implied probability.
+// Resolved/closed markets are skipped: a price of 0 or 1 is a result,
+// not odds. If the fetch fails, three baked-in DEMO claims are shown
+// and clearly labelled DEMO — never presented as live odds.
+//
+// Lens is 576x288. Keep every screen to 4 short lines.
+import {
+  waitForEvenAppBridge,
+  TextContainerProperty,
+  TextContainerUpgrade,
+  CreateStartUpPageContainer,
+  OsEventTypeList,
+} from '@evenrealities/even_hub_sdk'
+
+const GAMMA_URL =
+  'https://gamma-api.polymarket.com/events?active=true&closed=false&order=volume24hr&ascending=false&limit=30'
+
+type Claim = {
+  question: string
+  yesPct: number // 0-100
+  check: string // one line: volume, 24h move, end date
+  live: boolean
+}
+
+// Baked-in fallback, used ONLY when the live fetch fails. Labelled DEMO
+// on the lens so nobody mistakes these for real odds.
+const DEMO_CLAIMS: Claim[] = [
+  {
+    question: 'Bitcoin above $100k by Dec 31?',
+    yesPct: 62,
+    check: 'DEMO odds - no live data',
+    live: false,
+  },
+  {
+    question: 'Fed cuts rates in December?',
+    yesPct: 71,
+    check: 'DEMO odds - no live data',
+    live: false,
+  },
+  {
+    question: 'Ethereum above $4k by Dec 31?',
+    yesPct: 48,
+    check: 'DEMO odds - no live data',
+    live: false,
+  },
+]
+
+type GammaMarket = {
+  question?: string
+  outcomes?: string
+  outcomePrices?: string
+  volume24hr?: number
+  oneDayPriceChange?: number
+  endDateIso?: string
+  closed?: boolean
+  sportsMarketType?: string
+}
+type GammaEvent = { markets?: GammaMarket[] }
+
+function parsePrices(m: GammaMarket): number | null {
+  try {
+    const prices = JSON.parse(m.outcomePrices ?? '[]') as unknown[]
+    const yes = Number(prices[0])
+    // 0 and 1 are resolved results, not odds. Skip them.
+    if (!Number.isFinite(yes) || yes <= 0 || yes >= 1) return null
+    return yes
+  } catch {
+    return null
+  }
+}
+
+function fmtUsd(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}k`
+  return `$${n.toFixed(0)}`
+}
+
+function toClaims(data: GammaEvent[]): Claim[] {
+  const out: Claim[] = []
+  for (const ev of data) {
+    for (const m of ev.markets ?? []) {
+      if (m.closed || m.sportsMarketType) continue
+      const yes = parsePrices(m)
+      if (yes === null || !m.question) continue
+      const move = m.oneDayPriceChange ?? 0
+      const moveTxt = `${move >= 0 ? '+' : ''}${(move * 100).toFixed(1)}% 24h`
+      const end = m.endDateIso ? `ends ${m.endDateIso}` : 'no end date'
+      out.push({
+        question: m.question,
+        yesPct: Math.round(yes * 100),
+        check: `Vol ${fmtUsd(m.volume24hr ?? 0)} 24h · ${moveTxt} · ${end}`,
+        live: true,
+      })
+      break // one market per event keeps the lens list varied
+    }
+    if (out.length >= 5) break
+  }
+  return out
+}
+
+async function loadClaims(): Promise<Claim[]> {
+  try {
+    const res = await fetch(GAMMA_URL)
+    if (!res.ok) return DEMO_CLAIMS
+    const data = (await res.json()) as GammaEvent[]
+    const claims = toClaims(data)
+    return claims.length > 0 ? claims : DEMO_CLAIMS
+  } catch {
+    return DEMO_CLAIMS
+  }
+}
+
+function render(c: Claim, index: number, total: number): string {
+  const verdict =
+    c.yesPct >= 65 ? 'Likely YES' : c.yesPct <= 35 ? 'Likely NO' : 'A coin flip'
+  const tag = c.live ? 'LIVE' : 'DEMO'
+  return [
+    `ODDS WHISPER  ${index + 1}/${total}  [${tag}]`,
+    c.question,
+    `Yes ${c.yesPct}%  -  ${verdict}`,
+    c.check,
+  ].join('\n')
+}
+
+async function main() {
+  const bridge = await waitForEvenAppBridge()
+
+  const claims = await loadClaims()
+  let index = 0
+
+  const text = new TextContainerProperty({
+    containerName: 'main',
+    content: render(claims[0], 0, claims.length),
+    isEventCapture: 1, // receive temple-tap events on this container
+  })
+  await bridge.createStartUpPageContainer(
+    new CreateStartUpPageContainer({
+      containerTotalNum: 1,
+      textObject: [text],
+    }),
+  )
+
+  // Temple tap = CLICK_EVENT on the text container. Each tap moves to
+  // the next live claim and refreshes the lens in place (no flicker).
+  bridge.onEvenHubEvent((event) => {
+    const t = event.textEvent
+    if (!t) return
+    if (t.eventType === OsEventTypeList.CLICK_EVENT) {
+      index = (index + 1) % claims.length
+      void bridge.textContainerUpgrade(
+        new TextContainerUpgrade({
+          containerName: 'main',
+          content: render(claims[index], index, claims.length),
+        }),
+      )
+    }
+  })
+}
+
+void main()
