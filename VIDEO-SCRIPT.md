@@ -1,8 +1,10 @@
 # Odds Whisper — demo video script (up to 3 minutes)
 
 Film this in the Even Hub simulator on the borrowed desktop, or on G2
-glasses if you have them. Read the lines aloud in plain words, at a
-steady pace. Do not rush the tap — let the lens change on screen.
+glasses if you have them. Eddie films SILENTLY — no talking on camera;
+Mabel adds the narration afterwards (Paloma voice), so the recording
+only needs the lens and three slow taps. Do not rush the tap — let the
+lens change on screen.
 
 One sentence a judge should repeat afterwards: **"Tap your temple and
 the glasses whisper the crowd's odds."**
@@ -74,9 +76,10 @@ End on the lens showing a claim. Stop recording.
 
 ## Honest limits — say them if asked, do not hide them
 
-- The app has never run in the simulator or on real glasses yet. The
-  first simulator run is the test: if the lens says DEMO, the live
-  fetch is blocked and needs fixing.
+- The app HAS run in the Even Hub simulator (2026-11-25): the lens
+  shows live claims and a temple tap cycles them. It has never run on
+  real G2 glasses. If the lens says DEMO, the live fetch did not reach
+  Polymarket — say so on camera, never read DEMO odds as live.
 - Nothing is stored, nothing is traded, no wallet, no money moves.
   The app only reads public odds.
 

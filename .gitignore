@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Demo video media — never publish (bin-guide lesson: no git add -A here)
+*.mp4
+narration/
+tsconfig.tsbuildinfo
