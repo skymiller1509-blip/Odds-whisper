@@ -97,7 +97,7 @@ function toClaims(data: GammaEvent[]): Claim[] {
       out.push({
         question: m.question,
         yesPct: Math.round(yes * 100),
-        check: `Vol ${fmtUsd(m.volume24hr ?? 0)} 24h · ${moveTxt} · ${end}`,
+        check: `Vol ${fmtUsd(m.volume24hr ?? 0)} 24h - ${moveTxt} - ${end}`,
         live: true,
       })
       break // one market per event keeps the lens list varied
@@ -163,9 +163,19 @@ async function main() {
   status(`claims: ${claims.length} (${claims[0]?.live ? 'LIVE' : 'DEMO'})`)
   let index = 0
 
+  // The SDK marks geometry optional, but the simulator rejected a
+  // container without it (result 1 = invalid). The SDK's own example
+  // sets every field, so we do the same: full lens, 576x288.
   const text = new TextContainerProperty({
+    xPosition: 0,
+    yPosition: 0,
+    width: 576,
+    height: 288,
+    containerID: 1,
     containerName: 'main',
+    zOrderIndex: 1,
     content: render(claims[0], 0, claims.length),
+    textColor: 4,
     isEventCapture: 1, // receive temple-tap events on this container
   })
   status('container: creating...')
@@ -187,8 +197,10 @@ async function main() {
     if (!t) return
     if (t.eventType === OsEventTypeList.CLICK_EVENT) {
       index = (index + 1) % claims.length
+      status(`tap: showing claim ${index + 1}/${claims.length}`)
       void bridge.textContainerUpgrade(
         new TextContainerUpgrade({
+          containerID: 1,
           containerName: 'main',
           content: render(claims[index], index, claims.length),
         }),
