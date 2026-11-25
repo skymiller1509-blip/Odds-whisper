@@ -2,9 +2,11 @@
 
 **Tap your temple, and the lens whispers the crowd's odds on the next live market.**
 
-> **Demo video:** TODO — not filmed yet. Needs the borrowed desktop (simulator run first). See `VIDEO-SCRIPT.md` for the script.
+> **Demo video:** LIVE on YouTube since 2026-11-25 ~17:37 WAT (Unlisted), 1m 57s, Paloma narration: https://www.youtube.com/watch?v=S-ig6wpO6As (video file itself is gitignored, not in this repo). Verified live 2026-11-25 ~18:14 WAT.
 >
-> **Submission:** DoraHacks BUIDL page — TODO (link not on file yet; Eddie's step to create the BUIDL). Deadline Sun 29 Nov 2026, 20:59 WAT.
+> **Submission:** DoraHacks BUIDL page — IN PROGRESS, Eddie filling the form on 2026-11-25 evening. Deadline Sun 29 Nov 2026, 20:59 WAT.
+>
+> **Repo:** https://github.com/skymiller1509-blip/odds-whisper (public, created 2026-11-24).
 
 Tap temple, lens shows the next live claim: the market question, the
 crowd's odds (Yes %), and one check line (24h volume, 24h move, end date).
@@ -59,21 +61,32 @@ labelled DEMO on the lens, never as live odds.
 - SDK + CLI versions: `@evenrealities/even_hub_sdk` 0.0.16,
   `@evenrealities/evenhub-cli` 0.2.0, simulator 0.9.5.
 
+## Verified 2026-11-25 (Even Hub simulator, borrowed laptop)
+
+- Lens showed live odds for the first time: `ODDS WHISPER 1/5 [LIVE]`,
+  NVIDIA CEO question, Yes 100%.
+- Tap-to-advance works: one Click moved the lens 1/5 → 2/5
+  ("tap: showing claim 2/5", "upgrade: ok"). The simulator sends a
+  tap as a typeless system event (source 1, right temple), not a real
+  `CLICK_EVENT` — the app now accepts that too (commit `dd90a31`).
+  Filmed taps then advanced 2/5 → 3/5 → 4/5 → 5/5.
+- Demo video filmed and built the same evening: `demo-video-final.mp4`,
+  1m 57s, Paloma narration, from 35.5s of Win+G simulator footage.
+  Eddie approved the upload ("Whatever upload it", 2026-11-25 ~17:35 WAT);
+  it is live on YouTube (Unlisted): https://www.youtube.com/watch?v=S-ig6wpO6As
+- `out.ehpk` re-packed 2026-11-25 after the tap fix: 38,382 bytes,
+  built JS contains the simulator-tap acceptance. This is the pack to
+  submit, not the 23 Nov one.
+- Repo is public: https://github.com/skymiller1509-blip/odds-whisper
+
 ## NOT done yet — honest limits
 
-- Never run in the simulator or on real glasses. The simulator is a
-  desktop GUI window; this machine has no display and Eddie has no
-  desktop. Needs a borrowed desktop: `npm run dev`, then
-  `evenhub-simulator http://localhost:5173`, tap in the simulator,
-  film it for the demo video.
-- Live Gamma fetch inside the app is untested (only the endpoint
-  shape was checked live via the browser). First simulator run will
-  show LIVE or DEMO on the lens — if it says DEMO, the fetch is
-  blocked and needs fixing.
+- Never run on real G2 glasses, only in the Even Hub simulator.
+  Real glasses send a proper tap event; the simulator's typeless one
+  is now accepted as well, but hardware behaviour is unproven.
 - Not uploaded to Even Hub: `evenhub create` needs an Even Realities
-  account sign-in (Eddie's step). No GitHub repo yet — the publish
-  needs Eddie to create the repo, same as Tari/Kaggle.
-- No demo video yet (needs the borrowed desktop, same as above).
+  account sign-in (Eddie's step).
+- DoraHacks BUIDL page being created by Eddie on 2026-11-25 evening (his step).
 - Nothing is stored, nothing is traded, no wallet, no money moves.
   The app only reads public odds.
 
