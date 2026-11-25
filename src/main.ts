@@ -107,13 +107,35 @@ function toClaims(data: GammaEvent[]): Claim[] {
   return out
 }
 
+// Status readout: the lens is driven by the bridge, so the web page
+// itself is blank. Writing each stage into #app (and console.log)
+// makes the simulator's Browser window and /api/console show exactly
+// where the app is stuck, instead of a black lens with no clue.
+function status(line: string) {
+  console.log('[OddsWhisper] ' + line)
+  const el = document.getElementById('app')
+  if (el) {
+    const div = document.createElement('div')
+    div.textContent = line
+    el.appendChild(div)
+  }
+}
+
 async function loadClaims(): Promise<Claim[]> {
   try {
-    const res = await fetch(GAMMA_URL)
-    if (!res.ok) return DEMO_CLAIMS
-    const data = (await res.json()) as GammaEvent[]
-    const claims = toClaims(data)
-    return claims.length > 0 ? claims : DEMO_CLAIMS
+    // A fetch with no timeout can hang forever in the simulator's
+    // webview if the network stalls. 8 seconds, then DEMO.
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 8000)
+    try {
+      const res = await fetch(GAMMA_URL, { signal: ctrl.signal })
+      if (!res.ok) return DEMO_CLAIMS
+      const data = (await res.json()) as GammaEvent[]
+      const claims = toClaims(data)
+      return claims.length > 0 ? claims : DEMO_CLAIMS
+    } finally {
+      clearTimeout(timer)
+    }
   } catch {
     return DEMO_CLAIMS
   }
@@ -132,9 +154,13 @@ function render(c: Claim, index: number, total: number): string {
 }
 
 async function main() {
+  status('bridge: waiting...')
   const bridge = await waitForEvenAppBridge()
+  status('bridge: ready')
 
+  status('claims: loading...')
   const claims = await loadClaims()
+  status(`claims: ${claims.length} (${claims[0]?.live ? 'LIVE' : 'DEMO'})`)
   let index = 0
 
   const text = new TextContainerProperty({
@@ -142,12 +168,17 @@ async function main() {
     content: render(claims[0], 0, claims.length),
     isEventCapture: 1, // receive temple-tap events on this container
   })
-  await bridge.createStartUpPageContainer(
+  status('container: creating...')
+  // createStartUpPageContainer answers 0=success, 1=invalid,
+  // 2=oversize, 3=outOfMemory. The old code ignored the answer.
+  const result = await bridge.createStartUpPageContainer(
     new CreateStartUpPageContainer({
       containerTotalNum: 1,
       textObject: [text],
     }),
   )
+  status(`container: result ${result} (0=ok, 1=invalid, 2=oversize, 3=no memory)`)
+  status('lens should show: ' + render(claims[0], 0, claims.length).split('\n')[0])
 
   // Temple tap = CLICK_EVENT on the text container. Each tap moves to
   // the next live claim and refreshes the lens in place (no flicker).
