@@ -192,19 +192,41 @@ async function main() {
 
   // Temple tap = CLICK_EVENT on the text container. Each tap moves to
   // the next live claim and refreshes the lens in place (no flicker).
+  //
+  // The tap did NOT move the lens on the first simulator test
+  // (2026-11-25: six Click presses reached the simulator but the lens
+  // stayed on 1/5), so log EVERY event that arrives and the upgrade
+  // result — the Browser window then shows exactly where the tap dies.
   bridge.onEvenHubEvent((event) => {
-    const t = event.textEvent
-    if (!t) return
-    if (t.eventType === OsEventTypeList.CLICK_EVENT) {
+    const parts: string[] = []
+    if (event.textEvent)
+      parts.push(`textEvent type=${event.textEvent.eventType} id=${event.textEvent.containerID}`)
+    if (event.sysEvent)
+      parts.push(`sysEvent type=${event.sysEvent.eventType} src=${event.sysEvent.eventSource}`)
+    if (event.listEvent) parts.push(`listEvent type=${event.listEvent.eventType}`)
+    if (event.menuItemClickEvent) parts.push('menuItemClickEvent')
+    status(
+      'event: ' +
+        (parts.length ? parts.join(' | ') : JSON.stringify(event.jsonData ?? event)),
+    )
+    const type =
+      event.textEvent?.eventType ??
+      event.sysEvent?.eventType ??
+      event.listEvent?.eventType
+    if (type === OsEventTypeList.CLICK_EVENT) {
       index = (index + 1) % claims.length
       status(`tap: showing claim ${index + 1}/${claims.length}`)
-      void bridge.textContainerUpgrade(
-        new TextContainerUpgrade({
-          containerID: 1,
-          containerName: 'main',
-          content: render(claims[index], index, claims.length),
-        }),
-      )
+      void bridge
+        .textContainerUpgrade(
+          new TextContainerUpgrade({
+            containerID: 1,
+            containerName: 'main',
+            content: render(claims[index], index, claims.length),
+            textColor: 4,
+          }),
+        )
+        .then((ok) => status(`upgrade: ${ok ? 'ok' : 'FAILED'}`))
+        .catch((e) => status('upgrade: error ' + String(e)))
     }
   })
 }
