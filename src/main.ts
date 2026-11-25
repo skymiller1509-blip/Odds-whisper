@@ -19,6 +19,7 @@ import {
   TextContainerUpgrade,
   CreateStartUpPageContainer,
   OsEventTypeList,
+  EventSourceType,
 } from '@evenrealities/even_hub_sdk'
 
 const GAMMA_URL =
@@ -213,7 +214,21 @@ async function main() {
       event.textEvent?.eventType ??
       event.sysEvent?.eventType ??
       event.listEvent?.eventType
-    if (type === OsEventTypeList.CLICK_EVENT) {
+    // Fresh-trial finding (2026-11-25): the simulator's Click button
+    // arrives as a sysEvent with NO eventType at all — only
+    // eventSource = 1 (right temple). Real glasses send a proper
+    // CLICK_EVENT textEvent; the simulator does not. So a tap is
+    // either a real CLICK_EVENT, or a typeless touch event from a
+    // temple/ring source. Double-click and long-press carry a type,
+    // so they still do not advance.
+    const sysSrc = event.sysEvent?.eventSource
+    const isSimTap =
+      type === undefined &&
+      event.sysEvent !== undefined &&
+      (sysSrc === EventSourceType.TOUCH_EVENT_FROM_GLASSES_R ||
+        sysSrc === EventSourceType.TOUCH_EVENT_FROM_GLASSES_L ||
+        sysSrc === EventSourceType.TOUCH_EVENT_FROM_RING)
+    if (type === OsEventTypeList.CLICK_EVENT || isSimTap) {
       index = (index + 1) % claims.length
       status(`tap: showing claim ${index + 1}/${claims.length}`)
       void bridge
